@@ -18,6 +18,19 @@ class App extends BaseConfig
      */
     public string $baseURL = 'http://localhost/PurabayaGo/public/';
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        $configuredBaseUrl = env('app.baseURL');
+        if ($configuredBaseUrl) {
+            $this->baseURL = rtrim($configuredBaseUrl, '/') . '/';
+        } elseif (! empty($_SERVER['HTTP_HOST'])) {
+            $scheme = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $this->baseURL = $scheme . '://' . $_SERVER['HTTP_HOST'] . '/';
+        }
+    }
+
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
      * If you want to accept multiple Hostnames, set this.
