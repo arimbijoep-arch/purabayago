@@ -20,8 +20,6 @@ class App extends BaseConfig
 
     public function __construct()
     {
-        parent::__construct();
-
         $configuredBaseUrl = env('app.baseURL');
         if ($configuredBaseUrl) {
             $this->baseURL = rtrim($configuredBaseUrl, '/') . '/';
