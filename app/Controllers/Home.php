@@ -16,38 +16,57 @@ class Home extends BaseController
         $destinations = [];
         $featuredDestinations = [];
         $todayDepartures = [];
+        $logoImage = null;
+        $logoAlt = 'PURABAYA GO';
+        $heroImage = null;
+        $heroAlt = 'Bus keberangkatan dari Terminal Purabaya';
+        $terminalImage = null;
+        $terminalAlt = 'Terminal Purabaya Bungurasih';
 
-        if (session()->get('logged_in')) {
-            $destinations = $destinationModel->findAll();
+        try {
+            if (session()->get('logged_in')) {
+                $destinations = $destinationModel->findAll();
 
-            foreach ($destinations as $destination) {
-                $summary = $busModel
-                    ->select('COUNT(*) AS bus_count, MIN(fare) AS min_fare')
-                    ->where('destination_id', $destination['id'])
-                    ->first();
-                $categories = $busModel
-                    ->select('bus_class')
-                    ->distinct()
-                    ->where('destination_id', $destination['id'])
-                    ->orderBy('bus_class', 'ASC')
-                    ->findAll();
+                foreach ($destinations as $destination) {
+                    $summary = $busModel
+                        ->select('COUNT(*) AS bus_count, MIN(fare) AS min_fare')
+                        ->where('destination_id', $destination['id'])
+                        ->first();
+                    $categories = $busModel
+                        ->select('bus_class')
+                        ->distinct()
+                        ->where('destination_id', $destination['id'])
+                        ->orderBy('bus_class', 'ASC')
+                        ->findAll();
 
-                $featuredDestinations[] = [
-                    ...$destination,
-                    'bus_count' => (int) ($summary['bus_count'] ?? 0),
-                    'min_fare' => $summary['min_fare'] ?? null,
-                    'categories' => array_column($categories, 'bus_class'),
-                ];
+                    $featuredDestinations[] = [
+                        ...$destination,
+                        'bus_count' => (int) ($summary['bus_count'] ?? 0),
+                        'min_fare' => $summary['min_fare'] ?? null,
+                        'categories' => array_column($categories, 'bus_class'),
+                    ];
+                }
+
+                $todayDepartures = $busModel
+                    ->select('bus.*, destinations.destination_name, shelters.shelter_number, bus_schedules.departure_time AS scheduled_time, bus_schedules.schedule_status')
+                    ->join('destinations', 'destinations.id = bus.destination_id', 'left')
+                    ->join('shelters', 'shelters.id = bus.shelter_id', 'left')
+                    ->join('bus_schedules', 'bus_schedules.bus_id = bus.id', 'left')
+                    ->where('bus_schedules.departure_time IS NOT NULL', null, false)
+                    ->orderBy('bus_schedules.departure_time', 'ASC')
+                    ->findAll(6);
             }
 
-            $todayDepartures = $busModel
-                ->select('bus.*, destinations.destination_name, shelters.shelter_number, bus_schedules.departure_time AS scheduled_time, bus_schedules.schedule_status')
-                ->join('destinations', 'destinations.id = bus.destination_id', 'left')
-                ->join('shelters', 'shelters.id = bus.shelter_id', 'left')
-                ->join('bus_schedules', 'bus_schedules.bus_id = bus.id', 'left')
-                ->where('bus_schedules.departure_time IS NOT NULL', null, false)
-                ->orderBy('bus_schedules.departure_time', 'ASC')
-                ->findAll(6);
+            $logoImage = $settingModel->getValue('logo_image');
+            $logoAlt = $settingModel->getValue('logo_alt', $logoAlt);
+            $heroImage = $settingModel->getValue('hero_image');
+            $heroAlt = $settingModel->getValue('hero_alt', $heroAlt);
+            $terminalImage = $settingModel->getValue('terminal_image');
+            $terminalAlt = $settingModel->getValue('terminal_alt', $terminalAlt);
+        } catch (\Throwable $exception) {
+            if (ENVIRONMENT !== 'production') {
+                throw $exception;
+            }
         }
 
         $data = [
@@ -57,12 +76,12 @@ class Home extends BaseController
             'destinations' => $destinations,
             'featuredDestinations' => array_slice($featuredDestinations, 0, 6),
             'todayDepartures' => $todayDepartures,
-            'logoImage' => $settingModel->getValue('logo_image'),
-            'logoAlt' => $settingModel->getValue('logo_alt', 'PURABAYA GO'),
-            'heroImage' => $settingModel->getValue('hero_image'),
-            'heroAlt' => $settingModel->getValue('hero_alt', 'Bus keberangkatan dari Terminal Purabaya'),
-            'terminalImage' => $settingModel->getValue('terminal_image'),
-            'terminalAlt' => $settingModel->getValue('terminal_alt', 'Terminal Purabaya Bungurasih'),
+            'logoImage' => $logoImage,
+            'logoAlt' => $logoAlt,
+            'heroImage' => $heroImage,
+            'heroAlt' => $heroAlt,
+            'terminalImage' => $terminalImage,
+            'terminalAlt' => $terminalAlt,
         ];
 
         return view('home/index', $data);
