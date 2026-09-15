@@ -24,7 +24,9 @@ class Home extends BaseController
         $terminalAlt = 'Terminal Purabaya Bungurasih';
 
         try {
-            if (session()->get('logged_in')) {
+            $isServerless = (bool) env('VERCEL', false);
+
+            if (!$isServerless && session()->get('logged_in')) {
                 $destinations = $destinationModel->findAll();
 
                 foreach ($destinations as $destination) {
@@ -57,12 +59,14 @@ class Home extends BaseController
                     ->findAll(6);
             }
 
-            $logoImage = $settingModel->getValue('logo_image');
-            $logoAlt = $settingModel->getValue('logo_alt', $logoAlt);
-            $heroImage = $settingModel->getValue('hero_image');
-            $heroAlt = $settingModel->getValue('hero_alt', $heroAlt);
-            $terminalImage = $settingModel->getValue('terminal_image');
-            $terminalAlt = $settingModel->getValue('terminal_alt', $terminalAlt);
+            if (!$isServerless) {
+                $logoImage = $settingModel->getValue('logo_image');
+                $logoAlt = $settingModel->getValue('logo_alt', $logoAlt);
+                $heroImage = $settingModel->getValue('hero_image');
+                $heroAlt = $settingModel->getValue('hero_alt', $heroAlt);
+                $terminalImage = $settingModel->getValue('terminal_image');
+                $terminalAlt = $settingModel->getValue('terminal_alt', $terminalAlt);
+            }
         } catch (\Throwable $exception) {
             if (ENVIRONMENT !== 'production') {
                 throw $exception;
